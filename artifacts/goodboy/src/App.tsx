@@ -1,10 +1,21 @@
-import { Switch, Route, Router as WouterRouter } from "wouter";
+import { useEffect } from "react";
+import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
 import Home from "@/pages/Home";
 import Whisper from "@/pages/Whisper";
+import { trackPageView } from "@/lib/analytics";
+
+function PageViewTracker() {
+  const [location] = useLocation();
+  useEffect(() => {
+    trackPageView(location);
+  }, [location]);
+  return null;
+}
 
 function App() {
   return (
     <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+      <PageViewTracker />
       <Switch>
         <Route path="/" component={Home} />
         <Route path="/whisper" component={Whisper} />

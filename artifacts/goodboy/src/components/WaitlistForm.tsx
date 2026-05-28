@@ -1,5 +1,6 @@
 
 import { useState } from 'react'
+import { trackEvent } from '@/lib/analytics'
 
 export default function WaitlistForm({ prompt }: { prompt: string }) {
   const [email, setEmail] = useState('')
@@ -15,9 +16,12 @@ export default function WaitlistForm({ prompt }: { prompt: string }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, prompt }),
       })
-      setStatus(res.ok ? 'done' : 'error')
+      const ok = res.ok
+      setStatus(ok ? 'done' : 'error')
+      trackEvent('waitlist_submit', { status: ok ? 'success' : 'error', source: 'waitlist_form' })
     } catch {
       setStatus('error')
+      trackEvent('waitlist_submit', { status: 'error', source: 'waitlist_form' })
     }
   }
 

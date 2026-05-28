@@ -1,5 +1,6 @@
 
 import { useState } from 'react'
+import { trackEvent } from '@/lib/analytics'
 
 export default function CommitmentCTA({ prompt }: { prompt: string }) {
   const [email, setEmail] = useState('')
@@ -9,15 +10,19 @@ export default function CommitmentCTA({ prompt }: { prompt: string }) {
     e.preventDefault()
     if (!email.trim()) return
     setStatus('loading')
+    trackEvent('cta_click', { cta_name: 'commitment' })
     try {
       const res = await fetch('/api/waitlist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, prompt, commitment: 100 }),
       })
-      setStatus(res.ok ? 'done' : 'error')
+      const ok = res.ok
+      setStatus(ok ? 'done' : 'error')
+      trackEvent('waitlist_submit', { status: ok ? 'success' : 'error', source: 'commitment_cta' })
     } catch {
       setStatus('error')
+      trackEvent('waitlist_submit', { status: 'error', source: 'commitment_cta' })
     }
   }
 

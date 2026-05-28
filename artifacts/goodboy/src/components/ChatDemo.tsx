@@ -1,6 +1,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import CommitmentCTA from './CommitmentCTA'
+import { trackEvent } from '@/lib/analytics'
 
 type Message = {
   role: 'agent' | 'user'
@@ -90,6 +91,7 @@ export default function ChatDemo() {
     setLastUserPrompt(content)
     setInput('')
     setLoading(true)
+    trackEvent('chat_demo_interact', { intent: isApproval(content) ? 'approve' : 'change' })
 
     // Approval path — simulate GoodBoy executing the plan as a scripted sequence
     if (isApproval(content)) {

@@ -1,5 +1,6 @@
 
 import { useState } from 'react'
+import { trackEvent } from '@/lib/analytics'
 
 type Tier = 'goodboy' | 'whisper'
 
@@ -29,6 +30,7 @@ export default function GetAccess() {
     try {
       await navigator.clipboard.writeText(whisperUrl)
       setCopied(true)
+      trackEvent('cta_click', { cta_name: 'copy_whisper_link' })
       setTimeout(() => setCopied(false), 2000)
     } catch { /* silent */ }
   }
@@ -37,15 +39,19 @@ export default function GetAccess() {
     e.preventDefault()
     if (!email.trim()) return
     setStatus('loading')
+    trackEvent('cta_click', { cta_name: 'get_access', tier, upfront })
     try {
       const res = await fetch('/api/waitlist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, tier, whisperCode, upfront }),
       })
-      setStatus(res.ok ? 'done' : 'error')
+      const ok = res.ok
+      setStatus(ok ? 'done' : 'error')
+      trackEvent('waitlist_submit', { status: ok ? 'success' : 'error', source: 'get_access', tier })
     } catch {
       setStatus('error')
+      trackEvent('waitlist_submit', { status: 'error', source: 'get_access', tier })
     }
   }
 

@@ -1,5 +1,6 @@
 
 import { useState } from 'react'
+import { trackEvent } from '@/lib/analytics'
 
 export default function WhisperForm() {
   const [hint, setHint] = useState('')
@@ -15,9 +16,12 @@ export default function WhisperForm() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ hint }),
       })
-      setStatus(res.ok ? 'done' : 'error')
+      const ok = res.ok
+      setStatus(ok ? 'done' : 'error')
+      trackEvent('whisper_submit', { status: ok ? 'success' : 'error' })
     } catch {
       setStatus('error')
+      trackEvent('whisper_submit', { status: 'error' })
     }
   }
 

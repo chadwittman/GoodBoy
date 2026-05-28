@@ -1,4 +1,6 @@
 
+import { trackEvent } from '@/lib/analytics'
+
 const EXAMPLES = [
   "Wife's birthday, $150, she loves Mejuri and Aritzia",
   "Mom's Mother's Day, $80, she's really into gardening",
@@ -15,7 +17,7 @@ export default function ExampleChips({ onSelect }: { onSelect: (text: string) =>
         {EXAMPLES.map((ex) => (
           <button
             key={ex}
-            onClick={() => onSelect(ex)}
+            onClick={() => { trackEvent('cta_click', { cta_name: 'example_chip', example: ex }); onSelect(ex) }}
             className="text-xs px-3 py-1.5 rounded-full border border-zinc-700 hover:border-amber-500/60 text-zinc-400 hover:text-zinc-200 transition-colors"
           >
             {ex}
