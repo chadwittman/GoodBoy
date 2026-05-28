@@ -35,52 +35,256 @@ function SceneLabel({ n, label }: { n: string; label: string }) {
   )
 }
 
-// ─── Scene 1: Onboarding ──────────────────────────────────────────────────────
+// ─── Scene 1: Real Onboarding Form ───────────────────────────────────────────
 
-const ONBOARDING_FIELDS = [
-  { label: 'Who are we gifting?', value: 'Emma', delay: 300 },
-  { label: 'Relationship', value: 'Girlfriend', delay: 900 },
-  { label: 'Next occasion', value: "Birthday — April 7th, recurring", delay: 1600 },
-  { label: 'She loves', value: 'Mejuri, minimal gold, no rose gold', delay: 2400 },
-  { label: 'Dietary', value: 'Vegetarian. Loves Lilia, Rosewood.', delay: 3200 },
-  { label: 'Monthly budget', value: '$300', delay: 4000 },
-]
-
-function TypedValue({ value, active }: { value: string; active: boolean }) {
-  const [displayed, setDisplayed] = useState('')
-  useEffect(() => {
-    if (!active) return
-    setDisplayed('')
-    let i = 0
-    const interval = setInterval(() => {
-      i++
-      setDisplayed(value.slice(0, i))
-      if (i >= value.length) clearInterval(interval)
-    }, 28)
-    return () => clearInterval(interval)
-  }, [active, value])
-  return <span>{displayed}{active && displayed.length < value.length ? '|' : ''}</span>
+interface GiftItem {
+  type: 'product' | 'restaurant' | 'experience'
+  title: string
+  description: string
+  priceEstimate: number
+  url?: string
+  notes?: string
 }
 
-function OnboardingScene() {
-  const { ref, visible } = useInView()
-  const [activeField, setActiveField] = useState(-1)
-  const [doneFields, setDoneFields] = useState<number[]>([])
+interface GiftPlan {
+  occasionTitle: string
+  daysUntil: number
+  budgetCents: number
+  items: GiftItem[]
+  totalEstimateCents: number
+  agentNotes?: string
+}
 
-  useEffect(() => {
-    if (!visible) return
-    ONBOARDING_FIELDS.forEach((f, i) => {
-      setTimeout(() => {
-        setActiveField(i)
-        setTimeout(() => setDoneFields(d => [...d, i]), f.value.length * 28 + 200)
-      }, f.delay)
-    })
-  }, [visible])
-
-  const allDone = doneFields.length >= ONBOARDING_FIELDS.length
+function ResearchResults({ plan }: { plan: GiftPlan }) {
+  const typeIcon = (t: GiftItem['type']) =>
+    t === 'product' ? '🛍️' : t === 'restaurant' ? '🍽️' : '✨'
 
   return (
-    <div ref={ref} style={{ maxWidth: 440, margin: '0 auto' }}>
+    <div style={{ marginTop: 24, animation: 'msgIn 0.4s ease forwards' }}>
+      <div style={{
+        background: 'rgba(48,209,88,0.06)', border: '1px solid rgba(48,209,88,0.2)',
+        borderRadius: 16, padding: '16px 18px', marginBottom: 16,
+      }}>
+        <p style={{ fontSize: 13, color: 'var(--ios-green)', fontWeight: 600, marginBottom: 4 }}>
+          🐕 GoodBoy found your plan
+        </p>
+        <p style={{ fontSize: 12, color: 'rgba(235,235,245,0.5)' }}>
+          {plan.occasionTitle} · {plan.daysUntil} days away ·{' '}
+          Budget ${(plan.budgetCents / 100).toFixed(0)} ·{' '}
+          Estimated ${(plan.totalEstimateCents / 100).toFixed(0)}
+        </p>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {plan.items.map((item, i) => (
+          <div
+            key={i}
+            style={{
+              background: 'var(--ios-surface)', border: '1px solid var(--ios-separator)',
+              borderRadius: 14, padding: '14px 16px',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+              <span style={{ fontSize: 20, flexShrink: 0, marginTop: 1 }}>{typeIcon(item.type)}</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
+                  <span style={{ fontSize: 14, fontWeight: 600, color: '#fff' }}>{item.title}</span>
+                  <span style={{ fontSize: 13, color: 'rgba(235,235,245,0.5)', flexShrink: 0 }}>
+                    ${item.priceEstimate}
+                  </span>
+                </div>
+                <p style={{ fontSize: 12, color: 'rgba(235,235,245,0.55)', marginTop: 4, lineHeight: 1.5 }}>
+                  {item.description}
+                </p>
+                {item.notes && (
+                  <p style={{ fontSize: 11, color: 'var(--ios-timestamp)', marginTop: 4 }}>{item.notes}</p>
+                )}
+                {item.url && (
+                  <a
+                    href={item.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: 'inline-block', marginTop: 8, fontSize: 11,
+                      color: 'var(--ios-blue)', textDecoration: 'none', fontWeight: 600,
+                    }}
+                  >
+                    View →
+                  </a>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {plan.agentNotes && (
+        <p style={{
+          fontSize: 11, color: 'rgba(235,235,245,0.3)', marginTop: 14,
+          lineHeight: 1.6, fontStyle: 'italic', padding: '0 4px',
+        }}>
+          {plan.agentNotes}
+        </p>
+      )}
+    </div>
+  )
+}
+
+const inputStyle: React.CSSProperties = {
+  width: '100%',
+  background: 'rgba(255,255,255,0.05)',
+  border: '1px solid var(--ios-separator)',
+  borderRadius: 10,
+  padding: '10px 12px',
+  fontSize: 14,
+  color: '#fff',
+  outline: 'none',
+  boxSizing: 'border-box',
+  fontFamily: 'inherit',
+}
+
+const labelStyle: React.CSSProperties = {
+  fontSize: 11,
+  color: 'var(--ios-timestamp)',
+  letterSpacing: '0.04em',
+  textTransform: 'uppercase',
+  marginBottom: 6,
+  display: 'block',
+  fontWeight: 500,
+}
+
+type Phase = 'form' | 'saving' | 'researching' | 'done' | 'error'
+
+function OnboardingScene() {
+  const [phase, setPhase] = useState<Phase>('form')
+  const [errorMsg, setErrorMsg] = useState('')
+  const [plan, setPlan] = useState<GiftPlan | null>(null)
+
+  const [ownerEmail, setOwnerEmail] = useState('')
+  const [name, setName] = useState('')
+  const [relationship, setRelationship] = useState('')
+  const [location, setLocation] = useState('')
+  const [jewelryStyle, setJewelryStyle] = useState('')
+  const [foodPrefs, setFoodPrefs] = useState('')
+  const [favoriteRestaurants, setFavoriteRestaurants] = useState('')
+  const [flowerPrefs, setFlowerPrefs] = useState('')
+  const [dislikes, setDislikes] = useState('')
+  const [budgetCents, setBudgetCents] = useState(20000)
+  const [occasionTitle, setOccasionTitle] = useState('')
+  const [occasionDate, setOccasionDate] = useState('')
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setPhase('saving')
+    setErrorMsg('')
+
+    try {
+      // 1. Save person + prefs + occasion
+      const setupRes = await fetch('/api/setup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ownerEmail, name, relationship, location,
+          jewelryStyle: jewelryStyle || null,
+          foodPrefs: foodPrefs || null,
+          favoriteRestaurants: favoriteRestaurants || null,
+          flowerPrefs: flowerPrefs || null,
+          dislikes: dislikes || null,
+          budgetCents,
+          occasions: occasionTitle && occasionDate
+            ? [{ title: occasionTitle, occasionDate, recurrence: 'yearly' }]
+            : [],
+        }),
+      })
+      if (!setupRes.ok) {
+        const err = await setupRes.json().catch(() => ({}))
+        throw new Error((err as { error?: string }).error ?? 'Setup failed')
+      }
+      const { personId } = await setupRes.json() as { personId: number; occasionIds: number[] }
+
+      // 2. Trigger Hyperbrowser research agent
+      setPhase('researching')
+      const researchRes = await fetch(`/api/research/${personId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      })
+      if (!researchRes.ok) {
+        const err = await researchRes.json().catch(() => ({}))
+        throw new Error((err as { error?: string }).error ?? 'Research failed to start')
+      }
+      const { researchId } = await researchRes.json() as { researchId: number; status: string }
+
+      // 3. Poll until done
+      const pollInterval = setInterval(async () => {
+        try {
+          const statusRes = await fetch(`/api/research/${researchId}/status`)
+          const data = await statusRes.json() as { status: string; plan: GiftPlan | null; error: string | null }
+          if (data.status === 'done' && data.plan) {
+            clearInterval(pollInterval)
+            setPlan(data.plan)
+            setPhase('done')
+          } else if (data.status === 'error') {
+            clearInterval(pollInterval)
+            throw new Error(data.error ?? 'Agent error')
+          }
+        } catch (err) {
+          clearInterval(pollInterval)
+          setErrorMsg(err instanceof Error ? err.message : 'Polling failed')
+          setPhase('error')
+        }
+      }, 5000)
+
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : 'Something went wrong')
+      setPhase('error')
+    }
+  }
+
+  if (phase === 'done' && plan) {
+    return (
+      <div style={{ maxWidth: 480, margin: '0 auto' }}>
+        <ResearchResults plan={plan} />
+        <button
+          onClick={() => { setPhase('form'); setPlan(null) }}
+          style={{
+            marginTop: 20, fontSize: 12, color: 'var(--ios-timestamp)',
+            background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0',
+          }}
+        >
+          ← Try again with different details
+        </button>
+      </div>
+    )
+  }
+
+  if (phase === 'researching' || phase === 'saving') {
+    return (
+      <div style={{ maxWidth: 480, margin: '0 auto', textAlign: 'center', padding: '48px 0' }}>
+        <div style={{ fontSize: 32, marginBottom: 16 }}>🐕</div>
+        <p style={{ fontSize: 16, fontWeight: 600, color: '#fff', marginBottom: 8 }}>
+          {phase === 'saving' ? 'Saving profile…' : 'GoodBoy is researching…'}
+        </p>
+        <p style={{ fontSize: 13, color: 'rgba(235,235,245,0.4)', lineHeight: 1.6 }}>
+          {phase === 'saving'
+            ? 'Storing preferences and occasions.'
+            : 'Browsing real product pages, checking restaurant availability, finding flowers. This takes 1–2 minutes.'}
+        </p>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 24 }}>
+          {[0, 1, 2].map(i => (
+            <span key={i} style={{
+              width: 8, height: 8, borderRadius: '50%', background: 'var(--ios-blue)',
+              display: 'inline-block',
+              animation: `typingBounce 1.1s ease-in-out ${i * 0.18}s infinite`,
+            }} />
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ maxWidth: 480, margin: '0 auto' }}>
       <div style={{
         background: 'var(--ios-surface)', border: '1px solid var(--ios-separator)',
         borderRadius: 20, overflow: 'hidden',
@@ -96,62 +300,155 @@ function OnboardingScene() {
           }}>🐕</div>
           <div>
             <div style={{ fontSize: 14, fontWeight: 600, color: '#fff' }}>GoodBoy Setup</div>
-            <div style={{ fontSize: 11, color: 'var(--ios-timestamp)' }}>Tell me who to look out for</div>
-          </div>
-          <div style={{
-            marginLeft: 'auto', fontSize: 11, color: allDone ? 'var(--ios-green)' : 'var(--ios-blue)',
-            fontWeight: 600, transition: 'color 0.4s',
-          }}>
-            {allDone ? 'Ready ✓' : `${doneFields.length}/${ONBOARDING_FIELDS.length}`}
+            <div style={{ fontSize: 11, color: 'var(--ios-timestamp)' }}>Real form. Real database. Real Hyperbrowser agent.</div>
           </div>
         </div>
 
-        {/* Fields */}
-        <div style={{ padding: '4px 0' }}>
-          {ONBOARDING_FIELDS.map((f, i) => {
-            const isActive = activeField === i && !doneFields.includes(i)
-            const isDone = doneFields.includes(i)
-            const isVisible = activeField >= i
-            if (!isVisible) return null
-            return (
-              <div
-                key={i}
-                style={{
-                  padding: '12px 20px',
-                  borderBottom: i < ONBOARDING_FIELDS.length - 1 ? '1px solid rgba(56,56,58,0.5)' : 'none',
-                  animation: 'msgIn 0.2s ease forwards',
-                }}
-              >
-                <div style={{ fontSize: 11, color: 'var(--ios-timestamp)', marginBottom: 3, letterSpacing: '0.02em' }}>
-                  {f.label}
+        <form onSubmit={handleSubmit} style={{ padding: '20px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+            {/* Your email */}
+            <div>
+              <label style={labelStyle}>Your email</label>
+              <input
+                style={inputStyle} type="email" required placeholder="you@example.com"
+                value={ownerEmail} onChange={e => setOwnerEmail(e.target.value)}
+              />
+            </div>
+
+            {/* Person being gifted */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div>
+                <label style={labelStyle}>Their name</label>
+                <input
+                  style={inputStyle} type="text" required placeholder="Emma"
+                  value={name} onChange={e => setName(e.target.value)}
+                />
+              </div>
+              <div>
+                <label style={labelStyle}>Relationship</label>
+                <input
+                  style={inputStyle} type="text" required placeholder="Girlfriend"
+                  value={relationship} onChange={e => setRelationship(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* Location */}
+            <div>
+              <label style={labelStyle}>Their city</label>
+              <input
+                style={inputStyle} type="text" required placeholder="New York, NY"
+                value={location} onChange={e => setLocation(e.target.value)}
+              />
+            </div>
+
+            {/* Preferences */}
+            <div>
+              <label style={labelStyle}>Jewelry / gift style</label>
+              <input
+                style={inputStyle} type="text" placeholder="Mejuri, minimal gold, no rose gold"
+                value={jewelryStyle} onChange={e => setJewelryStyle(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label style={labelStyle}>Food preferences</label>
+              <input
+                style={inputStyle} type="text" placeholder="Vegetarian, loves Italian"
+                value={foodPrefs} onChange={e => setFoodPrefs(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label style={labelStyle}>Favorite restaurants</label>
+              <input
+                style={inputStyle} type="text" placeholder="Lilia, Via Carota, Rosewood"
+                value={favoriteRestaurants} onChange={e => setFavoriteRestaurants(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label style={labelStyle}>Flower preferences</label>
+              <input
+                style={inputStyle} type="text" placeholder="Garden roses, no lilies"
+                value={flowerPrefs} onChange={e => setFlowerPrefs(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label style={labelStyle}>Dislikes / avoid</label>
+              <input
+                style={inputStyle} type="text" placeholder="Rose gold, carnations, loud prints"
+                value={dislikes} onChange={e => setDislikes(e.target.value)}
+              />
+            </div>
+
+            {/* Budget slider */}
+            <div>
+              <label style={labelStyle}>
+                Budget — <span style={{ color: '#fff' }}>${(budgetCents / 100).toFixed(0)}</span>
+              </label>
+              <input
+                type="range" min={5000} max={100000} step={1000}
+                value={budgetCents} onChange={e => setBudgetCents(Number(e.target.value))}
+                style={{ width: '100%', accentColor: 'var(--ios-blue)' }}
+              />
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
+                <span style={{ fontSize: 10, color: 'var(--ios-timestamp)' }}>$50</span>
+                <span style={{ fontSize: 10, color: 'var(--ios-timestamp)' }}>$1,000</span>
+              </div>
+            </div>
+
+            {/* Occasion */}
+            <div style={{ borderTop: '1px solid var(--ios-separator)', paddingTop: 16 }}>
+              <p style={{ fontSize: 11, color: 'var(--ios-timestamp)', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 500 }}>
+                Upcoming occasion
+              </p>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div>
+                  <label style={labelStyle}>Occasion</label>
+                  <input
+                    style={inputStyle} type="text" placeholder="Birthday"
+                    value={occasionTitle} onChange={e => setOccasionTitle(e.target.value)}
+                  />
                 </div>
-                <div style={{
-                  fontSize: 15, color: isDone ? '#fff' : 'rgba(235,235,245,0.8)',
-                  fontWeight: isDone ? 500 : 400,
-                  minHeight: 22,
-                }}>
-                  {isDone
-                    ? f.value
-                    : isActive
-                      ? <TypedValue value={f.value} active={true} />
-                      : null}
+                <div>
+                  <label style={labelStyle}>Date</label>
+                  <input
+                    style={inputStyle} type="date"
+                    value={occasionDate} onChange={e => setOccasionDate(e.target.value)}
+                  />
                 </div>
               </div>
-            )
-          })}
-        </div>
+            </div>
 
-        {allDone && (
-          <div style={{
-            padding: '14px 20px', borderTop: '1px solid var(--ios-separator)',
-            background: 'rgba(48,209,88,0.06)',
-            animation: 'msgIn 0.3s ease forwards',
-          }}>
-            <p style={{ fontSize: 13, color: 'var(--ios-green)', fontWeight: 500 }}>
-              🐕 Got it. I'll start watching for her birthday.
+            {phase === 'error' && (
+              <div style={{
+                background: 'rgba(255,69,58,0.1)', border: '1px solid rgba(255,69,58,0.3)',
+                borderRadius: 10, padding: '10px 14px',
+              }}>
+                <p style={{ fontSize: 12, color: '#ff453a' }}>{errorMsg}</p>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              style={{
+                width: '100%', padding: '14px', borderRadius: 12,
+                background: 'var(--ios-blue)', color: '#fff',
+                fontSize: 15, fontWeight: 700, border: 'none', cursor: 'pointer',
+                letterSpacing: '-0.01em', marginTop: 4,
+              }}
+            >
+              Let GoodBoy find the perfect gift →
+            </button>
+
+            <p style={{ fontSize: 11, color: 'rgba(235,235,245,0.25)', textAlign: 'center' }}>
+              Saves to a real database · Spins up a Hyperbrowser agent · Takes 1–2 min
             </p>
           </div>
-        )}
+        </form>
       </div>
     </div>
   )
