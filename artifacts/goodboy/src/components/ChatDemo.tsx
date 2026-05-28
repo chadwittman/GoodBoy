@@ -9,6 +9,27 @@ type Message = {
   receipt?: string
 }
 
+const FAUX_ORDER_SEQUENCE: { delay: number; typingBefore: number; content: string }[] = [
+  { typingBefore: 700, delay: 0, content: 'On it. Spinning up now…' },
+  { typingBefore: 900, delay: 0, content: 'Mejuri — placing the Croissant Hoops order…' },
+  { typingBefore: 1100, delay: 0, content: 'Ordered. Confirmation #MJ-48201, ships 2-day. 📦' },
+  { typingBefore: 900, delay: 0, content: 'Lilia — calling the reservation line…' },
+  { typingBefore: 1300, delay: 0, content: 'Table for 2 confirmed, Sat 7:30pm. Conf #LIL-7732. 🍝' },
+  { typingBefore: 800, delay: 0, content: 'The Bouqs — scheduling the garden roses…' },
+  { typingBefore: 1100, delay: 0, content: 'Set for delivery morning of the 7th. Order #BQ-2049. 🌹' },
+  {
+    typingBefore: 1200,
+    delay: 0,
+    content: `All set. 🐕
+
+• Mejuri hoops — $128, ships 2-day
+• Lilia — Sat 7:30pm, ~$127
+• The Bouqs — morning of the 7th, $45
+
+$300 committed. I'll ping you when things ship.`,
+  },
+]
+
 const INITIAL_MESSAGE: Message = {
   role: 'agent',
   timestamp: 'Today 9:41 AM',
@@ -46,9 +67,11 @@ export default function ChatDemo() {
   const [messages, setMessages] = useState<Message[]>([INITIAL_MESSAGE])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [agentTyping, setAgentTyping] = useState(false)
   const [lastUserPrompt, setLastUserPrompt] = useState('')
   const msgContainerRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLTextAreaElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+  void setPhase
 
   // Scroll within chat only
   useEffect(() => {
@@ -68,10 +91,15 @@ export default function ChatDemo() {
     setInput('')
     setLoading(true)
 
-    // Approval path — simulate GoodBoy executing the plan
+    // Approval path — simulate GoodBoy executing the plan as a scripted sequence
     if (isApproval(content)) {
-      await new Promise(r => setTimeout(r, 1400))
-      setMessages(m => [...m, CONFIRM_MESSAGE])
+      for (const beat of FAUX_ORDER_SEQUENCE) {
+        setAgentTyping(true)
+        await new Promise(r => setTimeout(r, beat.typingBefore))
+        setAgentTyping(false)
+        setMessages(m => [...m, { role: 'agent', content: beat.content }])
+        await new Promise(r => setTimeout(r, 180))
+      }
       setLoading(false)
       return
     }
@@ -104,7 +132,7 @@ export default function ChatDemo() {
     }
   }
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChange() }
   }
 
@@ -181,8 +209,8 @@ export default function ChatDemo() {
             </div>
           ))}
 
-          {/* Typing dots — waiting for API response */}
-          {(loading && messages[messages.length - 1]?.role === 'user') && (
+          {/* Typing dots — waiting for API response or between scripted beats */}
+          {((loading && messages[messages.length - 1]?.role === 'user') || agentTyping) && (
             <div className="msg-enter" style={{ display: 'flex', alignItems: 'flex-start', marginTop: 2 }}>
               <div className="bubble-agent" style={{ padding: '13px 16px' }}>
                 <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
@@ -215,22 +243,23 @@ export default function ChatDemo() {
         {phase === 'cta' ? (
           <CommitmentCTA prompt={lastUserPrompt || "Emma's birthday, Mejuri hoops, Lilia dinner, flowers"} />
         ) : (
-          <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
-            <textarea
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <input
               ref={inputRef}
+              type="text"
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Change something…"
-              rows={2}
+              placeholder="iMessage"
               disabled={loading}
               style={{
                 flex: 1,
                 background: 'var(--ios-surface2)',
                 border: '1px solid var(--ios-separator)',
-                borderRadius: 18, padding: '9px 14px',
+                borderRadius: 18, padding: '7px 14px',
                 fontSize: 15, color: '#fff', fontFamily: 'inherit',
-                resize: 'none', outline: 'none', lineHeight: 1.4,
+                outline: 'none', lineHeight: 1.4, height: 34,
+                minWidth: 0,
               }}
             />
             <button
