@@ -1,65 +1,120 @@
-import Image from "next/image";
+import ChatDemo from '@/components/ChatDemo'
+import GetAccess from '@/components/GetAccess'
+
+const STEPS = [
+  { n: '01', title: 'Connect Robinhood Gold', body: 'Links to your Agentic Card API. Sets a monthly gift budget. Never goes over.' },
+  { n: '02', title: 'Watches your calendar', body: 'Birthdays, anniversaries, Mother\'s Day. Starts planning 2 to 4 weeks early.' },
+  { n: '03', title: 'Pings you to approve', body: 'GoodBoy orders, books, delivers. Texts you the receipts.' },
+]
 
 export default function Home() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <main style={{ minHeight: '100vh', background: '#000', display: 'flex', flexDirection: 'column' }}>
+
+      {/* ── Hero ── very tight, just the statement */}
+      <section style={{
+        display: 'flex', flexDirection: 'column', alignItems: 'center',
+        textAlign: 'center', padding: '72px 24px 48px',
+      }}>
+        <p style={{
+          fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase',
+          color: 'var(--ios-timestamp)', marginBottom: 18, fontWeight: 500,
+        }}>Early access</p>
+
+        <h1 style={{
+          fontSize: 'clamp(54px, 12vw, 92px)',
+          fontWeight: 700, letterSpacing: '-0.04em', lineHeight: 1.0,
+          color: '#fff', marginBottom: 16,
+        }}>GoodBoy.</h1>
+
+        <p style={{
+          fontSize: 'clamp(18px, 3.5vw, 24px)',
+          color: 'rgba(235,235,245,0.75)',
+          maxWidth: 340, lineHeight: 1.35, fontWeight: 500,
+          letterSpacing: '-0.02em', marginBottom: 14,
+        }}>The gifting agent who lives to please her.</p>
+
+        <p style={{
+          fontSize: 15, color: 'rgba(235,235,245,0.42)',
+          maxWidth: 320, lineHeight: 1.8, letterSpacing: '-0.01em',
+        }}>
+          He knows exactly what she wants before she says it.
+          Powered by Robinhood Gold. She can even drop hints.
+        </p>
+      </section>
+
+      {/* ── Demo + How it works (connected section) ── */}
+      <section style={{
+        display: 'flex', flexDirection: 'column', alignItems: 'center',
+        padding: '0 16px 0',
+      }}>
+        {/* Phone frame */}
+        <div style={{
+          width: '100%', maxWidth: 393,
+          borderRadius: '24px 24px 0 0',
+          overflow: 'hidden',
+          boxShadow: [
+            '0 0 0 1px rgba(255,255,255,0.08)',
+            '0 8px 32px rgba(0,0,0,0.6)',
+            '0 32px 80px rgba(0,0,0,0.5)',
+          ].join(', '),
+        }}>
+          <ChatDemo />
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+        {/* How it works — 3 columns, directly under phone, same width */}
+        <div style={{
+          width: '100%', maxWidth: 393,
+          display: 'grid', gridTemplateColumns: '1fr 1fr 1fr',
+          background: 'var(--ios-separator)',
+          gap: 1,
+          borderRadius: '0 0 20px 20px',
+          overflow: 'hidden',
+          boxShadow: '0 0 0 1px rgba(255,255,255,0.08)',
+          marginBottom: 80,
+        }}>
+          {STEPS.map(({ n, title, body }) => (
+            <div key={n} style={{
+              background: 'var(--ios-surface)',
+              padding: '14px 12px 16px',
+            }}>
+              <span style={{
+                fontSize: 10, fontWeight: 700, color: 'var(--ios-blue)',
+                letterSpacing: '0.04em', display: 'block', marginBottom: 7,
+              }}>{n}</span>
+              <p style={{
+                fontSize: 12, color: '#fff', fontWeight: 600,
+                lineHeight: 1.3, marginBottom: 5, letterSpacing: '-0.01em',
+              }}>{title}</p>
+              <p style={{
+                fontSize: 11, color: 'var(--ios-timestamp)',
+                lineHeight: 1.5, margin: 0,
+              }}>{body}</p>
+            </div>
+          ))}
         </div>
-      </main>
-    </div>
-  );
+      </section>
+
+      {/* ── Get access / two tiers ── */}
+      <div style={{ height: 1, background: 'var(--ios-separator)' }} />
+      <section style={{
+        padding: '72px 24px 80px',
+        maxWidth: 440, margin: '0 auto', width: '100%',
+      }}>
+        <GetAccess />
+      </section>
+
+      {/* ── Footer ── */}
+      <footer style={{
+        borderTop: '1px solid var(--ios-separator)',
+        padding: '20px 24px',
+        display: 'flex', justifyContent: 'space-between',
+        alignItems: 'center', flexWrap: 'wrap', gap: 8,
+      }}>
+        <span style={{ fontSize: 13, color: 'var(--ios-timestamp)', fontWeight: 600 }}>GoodBoy</span>
+        <span style={{ fontSize: 12, color: 'rgba(142,142,147,0.4)' }}>$9.99/mo. Cancel after 3 months.</span>
+      </footer>
+
+    </main>
+  )
 }
