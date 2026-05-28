@@ -1,12 +1,8 @@
 import { Router, type IRouter } from "express";
-import { promises as fs } from "fs";
-import path from "path";
+import { db } from "@workspace/db";
+import { whispersTable } from "@workspace/db/schema";
 
 const router: IRouter = Router();
-
-const WHISPER_PATH = path.join(process.cwd(), "whispers.json");
-
-type Entry = { hint: string; timestamp: string };
 
 router.post("/whisper", async (req, res) => {
   try {
@@ -16,21 +12,9 @@ router.post("/whisper", async (req, res) => {
       return;
     }
 
-    const entry: Entry = {
+    await db.insert(whispersTable).values({
       hint: hint.trim().slice(0, 500),
-      timestamp: new Date().toISOString(),
-    };
-
-    let existing: Entry[] = [];
-    try {
-      const raw = await fs.readFile(WHISPER_PATH, "utf-8");
-      existing = JSON.parse(raw);
-    } catch {
-      // first entry
-    }
-
-    existing.push(entry);
-    await fs.writeFile(WHISPER_PATH, JSON.stringify(existing, null, 2));
+    });
 
     res.json({ ok: true });
   } catch (err) {

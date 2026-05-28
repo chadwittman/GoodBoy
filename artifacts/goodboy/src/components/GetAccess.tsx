@@ -1,113 +1,172 @@
-
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { trackEvent } from '@/lib/analytics'
 
 type Tier = 'goodboy' | 'whisper'
 
-function generateCode() {
-  return Math.random().toString(36).slice(2, 7)
+const GOODBOY_PRICE = 9.99
+const WHISPER_PRICE = 14.98
+
+type CheckoutStatus = 'idle' | 'loading' | 'error' | 'success' | 'cancelled' | 'failed'
+
+function useCheckoutResult() {
+  const [result, setResult] = useState<{ status: CheckoutStatus; tier?: string; code?: string }>({ status: 'idle' })
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const checkout = params.get('checkout')
+    if (checkout === 'success') {
+      setResult({
+        status: 'success',
+        tier: params.get('tier') ?? 'goodboy',
+        code: params.get('code') ?? undefined,
+      })
+      window.history.replaceState({}, '', window.location.pathname)
+    } else if (checkout === 'cancelled') {
+      setResult({ status: 'cancelled' })
+      window.history.replaceState({}, '', window.location.pathname)
+    } else if (checkout === 'failed') {
+      setResult({ status: 'failed' })
+      window.history.replaceState({}, '', window.location.pathname)
+    }
+  }, [])
+
+  return result
 }
 
-const BASE_MO = 9.99
-const WHISPER_MO = 4.99
-const MONTHS = 3
+const BOOKING_STEPS = [
+  { icon: '📅', text: 'Scanning your calendar…', delay: 400 },
+  { icon: '🎂', text: "Found her birthday — 11 days out.", delay: 1400 },
+  { icon: '🌹', text: 'Ordering flowers from Bouqs…', delay: 2600 },
+  { icon: '✅', text: 'Flowers confirmed. Arrives the morning of.', delay: 3800 },
+  { icon: '🍽️', text: 'Checking dinner spots she saved…', delay: 5200 },
+  { icon: '📍', text: 'Table booked at Rosewood. 7:30pm.', delay: 6600 },
+  { icon: '💌', text: 'Writing a card in your voice…', delay: 8000 },
+  { icon: '🐕', text: "Done. She won't see it coming.", delay: 9200 },
+]
+
+function BookingAnimation() {
+  const [visibleCount, setVisibleCount] = useState(0)
+
+  useEffect(() => {
+    BOOKING_STEPS.forEach((step, i) => {
+      setTimeout(() => setVisibleCount(i + 1), step.delay)
+    })
+  }, [])
+
+  const isDone = visibleCount >= BOOKING_STEPS.length
+
+  return (
+    <div style={{
+      background: 'var(--ios-surface)', border: '1px solid var(--ios-separator)',
+      borderRadius: 20, padding: '20px 18px', textAlign: 'left',
+    }}>
+      <p style={{
+        fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase',
+        color: isDone ? 'var(--ios-green)' : 'var(--ios-blue)',
+        marginBottom: 16, fontWeight: 600,
+        transition: 'color 0.4s',
+      }}>
+        {isDone ? 'GoodBoy — done' : 'GoodBoy — working…'}
+      </p>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {BOOKING_STEPS.slice(0, visibleCount).map((step, i) => (
+          <div
+            key={i}
+            style={{
+              display: 'flex', alignItems: 'flex-start', gap: 10,
+              animation: 'fadeSlideIn 0.35s ease forwards',
+            }}
+          >
+            <span style={{ fontSize: 16, lineHeight: 1.4, flexShrink: 0 }}>{step.icon}</span>
+            <span style={{
+              fontSize: 14, color: i === visibleCount - 1 ? '#fff' : 'rgba(235,235,245,0.55)',
+              lineHeight: 1.5, letterSpacing: '-0.01em',
+              transition: 'color 0.6s',
+            }}>
+              {step.text}
+            </span>
+          </div>
+        ))}
+
+        {!isDone && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, paddingLeft: 26 }}>
+            {[0, 1, 2].map(i => (
+              <span key={i} style={{
+                width: 5, height: 5, borderRadius: '50%',
+                background: 'rgba(235,235,245,0.25)',
+                display: 'inline-block',
+                animation: `pulse 1.2s ease-in-out ${i * 0.2}s infinite`,
+              }} />
+            ))}
+          </div>
+        )}
+      </div>
+
+      <style>{`
+        @keyframes fadeSlideIn {
+          from { opacity: 0; transform: translateY(6px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes pulse {
+          0%, 100% { opacity: 0.25; }
+          50%       { opacity: 0.8; }
+        }
+      `}</style>
+    </div>
+  )
+}
 
 export default function GetAccess() {
   const [tier, setTier] = useState<Tier>('whisper')
   const [email, setEmail] = useState('')
-  const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
-  const [whisperCode] = useState(generateCode)
-  const [copied, setCopied] = useState(false)
+  const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle')
 
-  const whisperUrl = typeof window !== 'undefined'
-    ? `${window.location.origin}/whisper`
-    : 'goodboy.gift/whisper'
+  const checkoutResult = useCheckoutResult()
 
-  const monthlyTotal = tier === 'whisper' ? BASE_MO + WHISPER_MO : BASE_MO
-  const upfront = (monthlyTotal * MONTHS).toFixed(2)
-
-  const copyLink = async () => {
-    try {
-      await navigator.clipboard.writeText(whisperUrl)
-      setCopied(true)
-      trackEvent('cta_click', { cta_name: 'copy_whisper_link' })
-      setTimeout(() => setCopied(false), 2000)
-    } catch { /* silent */ }
-  }
+  const price = tier === 'whisper' ? WHISPER_PRICE : GOODBOY_PRICE
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!email.trim()) return
     setStatus('loading')
-    trackEvent('cta_click', { cta_name: 'get_access', tier, upfront })
+    trackEvent('cta_click', { cta_name: 'get_access', tier, price })
     try {
-      const res = await fetch('/api/waitlist', {
+      const res = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, tier, whisperCode, upfront }),
+        body: JSON.stringify({ email, tier }),
       })
-      const ok = res.ok
-      setStatus(ok ? 'done' : 'error')
-      trackEvent('waitlist_submit', { status: ok ? 'success' : 'error', source: 'get_access', tier })
+      if (!res.ok) throw new Error('Server error')
+      const { url } = await res.json()
+      if (url) {
+        window.location.href = url
+      } else {
+        setStatus('error')
+      }
     } catch {
       setStatus('error')
       trackEvent('waitlist_submit', { status: 'error', source: 'get_access', tier })
     }
   }
 
-  if (status === 'done') {
+  if (checkoutResult.status === 'success') {
     return (
-      <div style={{ textAlign: 'center' }}>
-        <div style={{ fontSize: 36, marginBottom: 20 }}>🐕</div>
-        <h2 style={{ fontSize: 28, fontWeight: 700, letterSpacing: '-0.03em', color: '#fff', marginBottom: 10 }}>
-          You&rsquo;re in.
-        </h2>
-        <p style={{ fontSize: 14, color: 'rgba(235,235,245,0.45)', lineHeight: 1.7, marginBottom: 36 }}>
-          GoodBoy will reach out before your next occasion.<br />
-          First 3 months committed. Billed when you go live.
-        </p>
+      <div>
+        <div style={{ textAlign: 'center', marginBottom: 28 }}>
+          <h2 style={{ fontSize: 28, fontWeight: 700, letterSpacing: '-0.03em', color: '#fff', marginBottom: 8 }}>
+            GoodBoy is on it.
+          </h2>
+          <p style={{ fontSize: 14, color: 'rgba(235,235,245,0.4)', lineHeight: 1.7 }}>
+            No confirmation needed. He&rsquo;s already working.
+          </p>
+        </div>
 
-        {tier === 'whisper' && (
-          <div style={{
-            background: 'var(--ios-surface)', border: '1px solid var(--ios-separator)',
-            borderRadius: 18, padding: '24px 20px',
-          }}>
-            <p style={{ fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ios-timestamp)', marginBottom: 14, fontWeight: 500 }}>
-              Your Whisper link
-            </p>
-            <p style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.025em', color: '#fff', marginBottom: 6 }}>
-              Give her the link.
-            </p>
-            <p style={{ fontSize: 14, color: 'rgba(235,235,245,0.45)', lineHeight: 1.6, marginBottom: 20 }}>
-              She&rsquo;ll use it. She always does.
-            </p>
-            <div style={{
-              background: 'var(--ios-surface2)', borderRadius: 12, padding: '12px 14px',
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              gap: 10, marginBottom: 14, border: '1px solid var(--ios-separator)',
-            }}>
-              <span style={{ fontSize: 13, color: 'rgba(235,235,245,0.5)', fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {whisperUrl}
-              </span>
-              <button
-                onClick={copyLink}
-                style={{
-                  background: copied ? 'var(--ios-green)' : 'var(--ios-blue)',
-                  color: '#fff', border: 'none', borderRadius: 8,
-                  padding: '6px 12px', fontSize: 13, fontWeight: 600,
-                  fontFamily: 'inherit', cursor: 'pointer', flexShrink: 0,
-                  transition: 'background 0.2s', whiteSpace: 'nowrap',
-                }}
-              >
-                {copied ? 'Copied!' : 'Copy'}
-              </button>
-            </div>
-            <p style={{ fontSize: 12, color: 'rgba(142,142,147,0.5)', lineHeight: 1.6, fontStyle: 'italic' }}>
-              &ldquo;She&rsquo;s going to pick up your phone anyway.<br />
-              Now she has a reason to stay quiet.&rdquo;
-            </p>
-          </div>
-        )}
+        <BookingAnimation />
+
+        <p style={{ fontSize: 12, color: 'rgba(142,142,147,0.3)', textAlign: 'center', marginTop: 20, lineHeight: 1.7 }}>
+          Welcome, founding member. GoodBoy will be in touch.
+        </p>
       </div>
     )
   }
@@ -124,14 +183,14 @@ export default function GetAccess() {
         fontWeight: 700, letterSpacing: '-0.035em', lineHeight: 1.1,
         color: '#fff', marginBottom: 10, textAlign: 'center',
       }}>
-        3 months to get in.<br />Cancel after that.
+        Join as a founding member.
       </h2>
 
       <p style={{
         fontSize: 15, color: 'rgba(235,235,245,0.45)',
         textAlign: 'center', lineHeight: 1.6, marginBottom: 28, letterSpacing: '-0.01em',
       }}>
-        $9.99/mo. Three months up front to join the waitlist.
+        One-time founding member fee. GoodBoy goes live when it&rsquo;s ready.
       </p>
 
       {/* Tier selector */}
@@ -150,7 +209,7 @@ export default function GetAccess() {
             Plans gifts, books tables, sends flowers.
           </p>
           <p style={{ fontSize: 13, color: tier === 'goodboy' ? '#fff' : 'rgba(235,235,245,0.4)', fontWeight: tier === 'goodboy' ? 600 : 400 }}>
-            $9.99/mo
+            ${GOODBOY_PRICE.toFixed(2)}
           </p>
         </button>
 
@@ -173,10 +232,10 @@ export default function GetAccess() {
             GoodBoy + Whisper 🤫
           </p>
           <p style={{ fontSize: 12, color: 'var(--ios-timestamp)', lineHeight: 1.5, marginBottom: 10 }}>
-            She gets a link. Drops hints. GoodBoy hears them.
+            She texts GoodBoy ideas. He actually uses them.
           </p>
           <p style={{ fontSize: 13, color: tier === 'whisper' ? '#fff' : 'rgba(235,235,245,0.4)', fontWeight: tier === 'whisper' ? 600 : 400 }}>
-            $14.98/mo
+            ${WHISPER_PRICE.toFixed(2)}
           </p>
         </button>
       </div>
@@ -184,34 +243,22 @@ export default function GetAccess() {
       {tier === 'whisper' && (
         <div style={{ borderLeft: '2px solid var(--ios-separator)', paddingLeft: 14, marginBottom: 20 }}>
           <p style={{ fontSize: 13, color: 'rgba(235,235,245,0.4)', lineHeight: 1.7, fontStyle: 'italic' }}>
-            &ldquo;She&rsquo;s going to pick up your phone anyway.<br />
-            Now she has a reason to stay quiet.&rdquo;
+            She gets her own line to GoodBoy. Drop a hint, he&rsquo;ll remember it.
           </p>
         </div>
       )}
 
-      {/* Price breakdown */}
+      {/* Price summary */}
       <div style={{
         background: 'var(--ios-surface)', border: '1px solid var(--ios-separator)',
         borderRadius: 14, padding: '14px 16px', marginBottom: 18, fontSize: 13,
       }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', color: 'rgba(235,235,245,0.55)', marginBottom: 6 }}>
-          <span>GoodBoy ({MONTHS} months)</span>
-          <span>${(BASE_MO * MONTHS).toFixed(2)}</span>
-        </div>
-        {tier === 'whisper' && (
-          <div style={{ display: 'flex', justifyContent: 'space-between', color: 'rgba(235,235,245,0.55)', marginBottom: 6 }}>
-            <span>Whisper ({MONTHS} months)</span>
-            <span>${(WHISPER_MO * MONTHS).toFixed(2)}</span>
-          </div>
-        )}
         <div style={{
           display: 'flex', justifyContent: 'space-between',
-          borderTop: '1px solid var(--ios-separator)', marginTop: 8, paddingTop: 8,
           color: '#fff', fontWeight: 600, fontSize: 14,
         }}>
-          <span>Due today</span>
-          <span>${upfront}</span>
+          <span>Founding member fee</span>
+          <span>${price.toFixed(2)}</span>
         </div>
       </div>
 
@@ -246,17 +293,24 @@ export default function GetAccess() {
           onMouseEnter={e => { if (email.trim()) e.currentTarget.style.background = 'var(--ios-blue-dark)' }}
           onMouseLeave={e => { if (email.trim()) e.currentTarget.style.background = 'var(--ios-blue)' }}
         >
-          {status === 'loading' ? 'Joining…' : `Commit 3 months for $${upfront} →`}
+          {status === 'loading' ? 'Opening checkout…' : `Become a founding member for $${price.toFixed(2)} →`}
         </button>
       </form>
 
       <p style={{ fontSize: 12, color: 'rgba(142,142,147,0.4)', textAlign: 'center', marginTop: 12, lineHeight: 1.7 }}>
-        Billed when GoodBoy goes live. Cancel anytime after 3 months.<br />
-        <span style={{ color: 'rgba(142,142,147,0.25)' }}>Powered by Robinhood Gold</span>
+        Charged now via Stripe. One-time founding member fee.
       </p>
 
-      {status === 'error' && (
-        <p style={{ fontSize: 13, color: '#ff453a', textAlign: 'center', marginTop: 10 }}>Something went wrong. Try again.</p>
+      {checkoutResult.status === 'cancelled' && (
+        <p style={{ fontSize: 13, color: 'rgba(235,235,245,0.45)', textAlign: 'center', marginTop: 10 }}>
+          Payment cancelled — no charge was made. Try again when you&rsquo;re ready.
+        </p>
+      )}
+
+      {(checkoutResult.status === 'failed' || status === 'error') && (
+        <p style={{ fontSize: 13, color: '#ff453a', textAlign: 'center', marginTop: 10 }}>
+          Something went wrong. Please try again.
+        </p>
       )}
     </div>
   )
